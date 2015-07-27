@@ -1,12 +1,11 @@
-var mqtt    = require('mqtt');
-var client  = mqtt.connect(process.argv[2] || 'mqtt://test.mosquitto.org');
-var topic = process.argv[3] || 'some_topic';
+var mqtt = require('mqtt');
 
-client.on('connect', function () {
-  client.subscribe(topic);
-});
+var brokerUrl = process.argv[2];
+var topic = process.argv[3];
 
-client.on('message', function (topic, message) {
-  console.log(message.toString());
-  client.end();
-});
+mqtt.connect(brokerUrl)
+    .subscribe(topic)
+    .on('message', function (topic, message) {
+      console.log(message.toString());
+      this.end();
+    });

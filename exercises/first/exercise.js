@@ -7,39 +7,58 @@ var exercise = require('workshopper-exercise')(),
 
 
 exercise = filecheck(exercise);
-
 exercise = execute(exercise);
-
-exercise = comparestdout(exercise);
 
 function rndport() {
   return 1024 + Math.floor(Math.random() * 64511);
 }
 
 exercise.addSetup(function (mode, callback) {
-  var submissionTopic = chance.word();
-  var solutionTopic = chance.word();
-  var message = chance.word();
+  var submissionTopic = chance.word(),
+      solutionTopic = chance.word(),
+      message = chance.word();
 
+  this.clientCount = 0;
   this.submissionPort = this.solutionPort = rndport();
 
-  this.submissionArgs = ['mqtt://localhost:' + this.submissionPort, submissionTopic];
-  this.solutionArgs = ['mqtt://localhost:' + this.solutionPort, solutionTopic];
+  var brokerUrl = ('mqtt://localhost:' + String(this.submissionPort));
 
-  this.server = new mosca.Server({
-    port: this.submissionPort
-  });
+  this.submissionArgs = [brokerUrl, submissionTopic];
+  this.solutionArgs = [brokerUrl, solutionTopic];
 
-  this.server.on('subscribed', (function (topic) {
-    this.server.publish({ topic: topic, payload: message });
-  }).bind(this));
-
-  this.server.on('ready', callback);
+  this.server = new mosca.Server({ port: this.submissionPort })
+      .on('clientConnected', (function () {
+        this.clientCount++;
+      }).bind(this))
+      .on('clientDisconnected', (function () {
+        this.clientCount--;
+      }).bind(this))
+      .on('subscribed', function (topic, client) {
+        this.publish({ topic: topic, payload: message });
+      })
+      .on('ready', callback);
 });
+
+exercise.addProcessor(function (mode, callback) {
+  setTimeout(query.bind(this), 500);
+
+  setImmediate(function () {
+    callback(null, true)
+  });
+});
+
+exercise = comparestdout(exercise);
+
+function query() {
+  if (this.clientCount > 0) {
+    this.emit('fail', 'Client did not disconnect from broker');
+    process.exit(1);
+  }
+}
 
 exercise.addCleanup(function (mode, passed, callback) {
   if (!this.server)
-    return process.nextTick(callback);
+    return setImmediate(callback);
 
   this.server.close(callback);
 });
