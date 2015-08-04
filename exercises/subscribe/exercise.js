@@ -7,6 +7,11 @@ var exercise = require('workshopper-exercise')(),
 
 exercise = filecheck(exercise);
 exercise = execute(exercise);
+
+exercise = util.checkClientsDisconnected(exercise);
+
+exercise = comparestdout(exercise);
+
 exercise = util.createServer(exercise);
 
 exercise.addSetup(function (mode, callback) {
@@ -24,10 +29,6 @@ exercise.addSetup(function (mode, callback) {
 
   callback();
 });
-
-exercise = util.checkClientsDisconnected(exercise, true);
-
-exercise = comparestdout(exercise);
 
 exercise = util.shutdownServer(exercise);
 

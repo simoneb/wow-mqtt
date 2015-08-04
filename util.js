@@ -17,9 +17,9 @@ function shutdownServer(exercise) {
   });
 }
 
-function checkClientsDisconnected(exercise, isAsync) {
+function checkClientsDisconnected(exercise) {
   return exercise.addProcessor(function (mode, callback) {
-    if (isAsync) {
+    if (exercise.stdoutOverridden) {
       setTimeout(checkClientDisconnected.bind(this, function () {
       }), 500);
       setImmediate(function () {
@@ -61,7 +61,11 @@ function createServer(exercise) {
 }
 
 function overrideStdout(exercise) {
-  exercise.getStdout = function () {
+  exercise.stdoutOverridden = true;
+
+  exercise.getStdout = function (type, child) {
+    if (type === 'submission') child.stdout.pipe(process.stdout);
+
     return through2();
   };
 
